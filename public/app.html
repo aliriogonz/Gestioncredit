@@ -1,0 +1,1348 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="description" content="Control de compras de importación, inventario, clientes y ventas a crédito. Versión web.">
+  <meta name="theme-color" content="#d97706">
+  <link rel="apple-touch-icon" href="/icon-180.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="/icon-512.png">
+  <title>GestiónCredit — Importaciones y Ventas</title>
+  <style>
+    :root {
+      --primary: #d97706;
+      --primary-light: #fef3c7;
+      --primary-dark: #92400e;
+      --bg: #fafaf9;
+      --surface: #ffffff;
+      --border: #e5e7eb;
+      --text: #1c1917;
+      --muted: #6b7280;
+      --green: #16a34a;
+      --green-bg: #dcfce7;
+      --green-border: #86efac;
+      --red: #dc2626;
+      --red-bg: #fee2e2;
+      --red-border: #fca5a5;
+      --amber-bg: #fef3c7;
+      --amber-border: #fcd34d;
+      --radius: 14px;
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); min-height: 100dvh; overflow-x: hidden; }
+
+    /* ── Layout ── */
+    #header {
+      background: var(--surface); border-bottom: 1px solid var(--border);
+      padding: calc(var(--safe-top) + 14px) 16px 14px;
+      position: sticky; top: 0; z-index: 100;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .header-logo { display: flex; align-items: center; gap: 8px; }
+    .header-logo-icon { background: var(--primary); color: white; border-radius: 10px; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+    .header-title { font-size: 18px; font-weight: 800; color: var(--primary); }
+    #header-action { display: flex; gap: 8px; }
+
+    #content { padding: 16px; padding-bottom: calc(72px + var(--safe-bottom) + 16px); min-height: 100dvh; }
+
+    #nav {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      background: var(--surface); border-top: 1px solid var(--border);
+      display: flex; padding-bottom: var(--safe-bottom); z-index: 100;
+    }
+    .nav-item {
+      flex: 1; display: flex; flex-direction: column; align-items: center;
+      padding: 8px 2px; cursor: pointer; gap: 3px; font-size: 10px; font-weight: 600;
+      color: var(--muted); min-height: 52px; justify-content: center;
+      transition: color 0.15s;
+    }
+    .nav-item.active { color: var(--primary); }
+    .nav-icon { font-size: 22px; line-height: 1; }
+
+    /* ── Cards ── */
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 12px; }
+    .card-title { font-size: 15px; font-weight: 700; }
+    .card-sub { font-size: 13px; color: var(--muted); margin-top: 3px; }
+
+    /* ── Stats ── */
+    .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+    .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; }
+    .stat-label { font-size: 11px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+    .stat-value { font-size: 22px; font-weight: 800; color: var(--primary); }
+
+    /* ── Buttons ── */
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 13px 20px; border-radius: 12px; font-size: 15px; font-weight: 700; border: none; cursor: pointer; min-height: 48px; transition: opacity 0.15s; font-family: inherit; }
+    .btn:active { opacity: 0.72; }
+    .btn-primary { background: var(--primary); color: white; }
+    .btn-secondary { background: var(--border); color: var(--text); }
+    .btn-danger { background: var(--red); color: white; }
+    .btn-ghost { background: transparent; color: var(--primary); border: 1.5px solid var(--primary); }
+    .btn-full { width: 100%; }
+    .btn-sm { padding: 8px 14px; font-size: 13px; min-height: 36px; border-radius: 9px; }
+
+    /* ── FAB ── */
+    .fab { position: fixed; bottom: calc(68px + var(--safe-bottom) + 18px); right: 18px; width: 56px; height: 56px; border-radius: 28px; background: var(--primary); color: white; font-size: 28px; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 16px rgba(217,119,6,0.45); z-index: 50; }
+
+    /* ── Sheet/Modal ── */
+    .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.48); z-index: 200; display: none; align-items: flex-end; }
+    .overlay.open { display: flex; }
+    .sheet { background: var(--surface); border-radius: 22px 22px 0 0; width: 100%; max-height: 92dvh; overflow-y: auto; padding: 0 16px calc(var(--safe-bottom) + 20px); }
+    .sheet-handle { width: 36px; height: 4px; background: var(--border); border-radius: 2px; margin: 10px auto 18px; }
+    .sheet-title { font-size: 19px; font-weight: 800; margin-bottom: 20px; }
+
+    /* ── Form ── */
+    .form-group { margin-bottom: 15px; }
+    .form-label { display: block; font-size: 12px; font-weight: 700; color: var(--muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .form-input { width: 100%; padding: 13px 14px; border: 1.5px solid var(--border); border-radius: 11px; font-size: 16px; background: var(--bg); color: var(--text); outline: none; min-height: 48px; font-family: inherit; transition: border-color 0.15s; -webkit-appearance: none; }
+    .form-input:focus { border-color: var(--primary); }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    textarea.form-input { min-height: 72px; resize: none; }
+
+    /* ── Badges ── */
+    .badge { display: inline-block; padding: 3px 9px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+    .badge-green { background: var(--green-bg); color: var(--green); }
+    .badge-red { background: var(--red-bg); color: var(--red); }
+    .badge-amber { background: var(--amber-bg); color: #92400e; }
+    .badge-gray { background: var(--border); color: var(--muted); }
+
+    /* ── List rows ── */
+    .row { display: flex; align-items: center; padding: 13px 0; border-bottom: 1px solid var(--border); gap: 12px; cursor: pointer; }
+    .row:last-child { border-bottom: none; }
+    .row-left { flex: 1; min-width: 0; }
+    .row-title { font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .row-sub { font-size: 13px; color: var(--muted); margin-top: 2px; }
+    .row-right { text-align: right; flex-shrink: 0; }
+    .row-chevron { color: var(--muted); font-size: 20px; flex-shrink: 0; }
+
+    /* ── Alerts ── */
+    .alert { border-radius: 12px; padding: 13px 14px; margin-bottom: 10px; display: flex; gap: 10px; align-items: flex-start; }
+    .alert-red { background: var(--red-bg); border: 1px solid var(--red-border); }
+    .alert-amber { background: var(--amber-bg); border: 1px solid var(--amber-border); }
+    .alert-green { background: var(--green-bg); border: 1px solid var(--green-border); }
+    .alert-icon { font-size: 22px; flex-shrink: 0; line-height: 1; margin-top: 1px; }
+    .alert-title { font-size: 14px; font-weight: 700; }
+    .alert-body { font-size: 13px; color: var(--muted); margin-top: 2px; line-height: 1.4; }
+
+    /* ── Section header ── */
+    .sec-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; margin-top: 4px; }
+    .sec-title { font-size: 17px; font-weight: 800; }
+
+    /* ── Price breakdown ── */
+    .breakdown { background: var(--bg); border-radius: 10px; padding: 12px; font-size: 13px; }
+    .breakdown-row { display: flex; justify-content: space-between; padding: 3px 0; color: var(--muted); }
+    .breakdown-total { border-top: 1px solid var(--border); margin-top: 6px; padding-top: 8px; font-weight: 800; color: var(--text); font-size: 14px; }
+
+    /* ── Profit row ── */
+    .profit-row { background: var(--green-bg); border: 1px solid var(--green-border); border-radius: 11px; padding: 12px 14px; display: flex; justify-content: space-between; align-items: center; margin-top: 10px; }
+    .profit-label { font-size: 13px; font-weight: 700; color: var(--green); display: flex; align-items: center; gap: 6px; }
+    .profit-value { font-size: 16px; font-weight: 800; color: var(--green); }
+    .profit-pct { font-size: 12px; background: white; color: var(--green); padding: 2px 7px; border-radius: 7px; font-weight: 800; margin-left: 6px; border: 1px solid var(--green-border); }
+
+    /* ── Tabs ── */
+    .tabs { display: flex; background: var(--border); border-radius: 11px; padding: 3px; margin-bottom: 14px; }
+    .tab { flex: 1; padding: 9px; text-align: center; font-size: 13px; font-weight: 700; border-radius: 9px; cursor: pointer; color: var(--muted); transition: all 0.15s; }
+    .tab.active { background: var(--surface); color: var(--primary); box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+
+    /* ── Back button ── */
+    .back-btn { background: none; border: none; color: var(--primary); font-size: 16px; cursor: pointer; padding: 4px 0; display: flex; align-items: center; gap: 4px; font-weight: 700; font-family: inherit; margin-bottom: 10px; }
+
+    /* ── Empty state ── */
+    .empty { text-align: center; padding: 48px 24px; color: var(--muted); }
+    .empty-icon { font-size: 52px; margin-bottom: 14px; }
+    .empty-text { font-size: 15px; line-height: 1.5; }
+
+    /* ── Dialog ── */
+    .dialog-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.48); z-index: 300; display: none; align-items: center; justify-content: center; padding: 24px; }
+    .dialog-overlay.open { display: flex; }
+    .dialog { background: var(--surface); border-radius: 18px; padding: 24px; width: 100%; max-width: 320px; }
+    .dialog-title { font-size: 17px; font-weight: 800; margin-bottom: 8px; }
+    .dialog-body { font-size: 14px; color: var(--muted); margin-bottom: 22px; line-height: 1.5; }
+    .dialog-btns { display: flex; gap: 10px; }
+
+    /* ── Toast ── */
+    #toast { position: fixed; bottom: calc(68px + var(--safe-bottom) + 16px); left: 16px; right: 16px; background: #1c1917; color: white; padding: 13px 16px; border-radius: 13px; font-size: 14px; font-weight: 600; z-index: 400; transform: translateY(16px); opacity: 0; transition: all 0.22s; pointer-events: none; text-align: center; }
+    #toast.show { transform: translateY(0); opacity: 1; }
+
+    /* ── Chart ── */
+    .chart-wrap { overflow-x: auto; padding-bottom: 4px; }
+
+    /* ── Misc ── */
+    h1 { font-size: 24px; font-weight: 800; color: var(--primary); margin-bottom: 4px; }
+    .page-sub { font-size: 14px; color: var(--muted); margin-bottom: 18px; }
+    select.form-input { background-image: none; }
+    .sep { height: 1px; background: var(--border); margin: 12px 0; }
+    .loading { text-align: center; padding: 60px 16px; color: var(--muted); font-size: 28px; }
+
+    /* ── Botones de la cabecera ── */
+    .tool-btn {
+      background: var(--bg); border: 1px solid var(--border); border-radius: 10px;
+      width: 36px; height: 36px; font-size: 16px; cursor: pointer; font-family: inherit;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .tool-btn:hover { background: var(--primary-light); }
+    #header-tools { display: flex; gap: 6px; align-items: center; }
+    #header-right { display: flex; gap: 8px; align-items: center; }
+    .header-inner { display: flex; align-items: center; justify-content: space-between; width: 100%; }
+
+    /* ── Escritorio / pantallas grandes ── */
+    @media (min-width: 900px) {
+      #header { padding: 14px 32px; }
+      .header-inner, #content { max-width: 1040px; margin: 0 auto; width: 100%; }
+      #header { display: block; }
+      .header-inner { display: flex; align-items: center; justify-content: space-between; }
+      #content { padding: 24px 32px 96px; }
+      #nav { justify-content: center; gap: 8px; padding: 6px 0; }
+      .nav-item { flex: 0 0 140px; }
+      .fab { right: calc(50% - 520px + 24px); }
+      .sheet { max-width: 560px; margin: 0 auto; border-radius: 16px; }
+      .overlay.open .sheet { margin-bottom: 4vh; }
+    }
+    @media (min-width: 900px) and (max-width: 1140px) {
+      .fab { right: 24px; }
+    }
+  </style>
+</head>
+<body>
+<div id="header">
+  <div class="header-inner">
+    <div class="header-logo">
+      <div class="header-logo-icon">💳</div>
+      <span class="header-title">GestiónCredit</span>
+    </div>
+    <div id="header-right">
+      <div id="header-action"></div>
+      <div id="header-tools">
+        <button class="tool-btn" title="Respaldo de datos" onclick="openBackup()">💾</button>
+        <button class="tool-btn" title="Bloquear" onclick="lockApp()">🔒</button>
+      </div>
+    </div>
+  </div>
+</div>
+<div id="content"><div class="loading">⏳</div></div>
+
+<!-- ── Pantalla de bloqueo (clave de acceso) ── -->
+<div id="lockscreen" style="position:fixed;inset:0;z-index:9999;background:linear-gradient(160deg,#fafaf9,#fef3c7);display:none;flex-direction:column;align-items:center;justify-content:center;padding:24px;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Segoe UI',sans-serif;">
+  <div style="width:84px;height:84px;border-radius:20px;background:#d97706;color:white;display:flex;align-items:center;justify-content:center;font-size:44px;box-shadow:0 8px 24px rgba(217,119,6,.35);margin-bottom:18px;">🔒</div>
+  <h1 style="font-size:22px;font-weight:800;color:#d97706;margin-bottom:6px;">GestiónCredit</h1>
+  <p style="font-size:14px;color:#6b7280;margin-bottom:20px;">Introduce la clave para continuar</p>
+  <form id="lock-form" style="width:100%;max-width:320px;display:flex;flex-direction:column;gap:10px;">
+    <input id="lock-input" type="password" autocomplete="current-password" inputmode="text" placeholder="Clave de acceso" style="width:100%;padding:14px 16px;border-radius:12px;border:1px solid #e5e7eb;background:white;font-size:16px;outline:none;" />
+    <button type="submit" style="width:100%;padding:14px;border-radius:12px;border:none;background:#d97706;color:white;font-weight:700;font-size:16px;">Entrar</button>
+    <div id="lock-error" style="min-height:18px;color:#dc2626;font-size:13px;text-align:center;"></div>
+  </form>
+</div>
+
+<nav id="nav">
+  <div class="nav-item" data-page="dashboard" onclick="nav('dashboard')"><span class="nav-icon">🏠</span>Resumen</div>
+  <div class="nav-item" data-page="lotes"     onclick="nav('lotes')">    <span class="nav-icon">📦</span>Lotes</div>
+  <div class="nav-item" data-page="inventario" onclick="nav('inventario')"><span class="nav-icon">🏷️</span>Stock</div>
+  <div class="nav-item" data-page="clientes"  onclick="nav('clientes')"> <span class="nav-icon">👥</span>Clientes</div>
+  <div class="nav-item" data-page="ventas"    onclick="nav('ventas')">   <span class="nav-icon">💰</span>Ventas</div>
+</nav>
+
+<div class="overlay" id="sheet-overlay" onclick="overlayClick(event)">
+  <div class="sheet" id="sheet-body"></div>
+</div>
+<div class="dialog-overlay" id="dlg-overlay">
+  <div class="dialog" id="dlg-body"></div>
+</div>
+<div id="toast"></div>
+
+<script>
+/* ═══════════════════════════════════════════
+   INDEXEDDB
+═══════════════════════════════════════════ */
+let DB;
+const STORES = ['lotes','productos','clientes','ventas','venta_items','pagos'];
+
+function openDB() {
+  return new Promise((res, rej) => {
+    if (!('indexedDB' in window)) {
+      return rej(new Error('Tu navegador no permite base de datos local. Abre esta app en Safari (no en modo privado).'));
+    }
+    let settled = false;
+    const done = (fn, val) => { if (!settled) { settled = true; fn(val); } };
+    const timer = setTimeout(() => {
+      done(rej, new Error('La base de datos tardó demasiado en abrir. Cierra otras pestañas de la app e inténtalo de nuevo.'));
+    }, 8000);
+    let req;
+    try { req = indexedDB.open('gc_v1', 2); }
+    catch (err) { clearTimeout(timer); return done(rej, err); }
+    req.onerror     = () => { clearTimeout(timer); done(rej, req.error || new Error('No se pudo abrir la base de datos')); };
+    req.onblocked   = () => { clearTimeout(timer); done(rej, new Error('Base de datos bloqueada por otra pestaña. Cierra las demás pestañas de GestiónCredit.')); };
+    req.onsuccess   = () => { clearTimeout(timer); DB = req.result; DB.onversionchange = () => DB.close(); done(res, DB); };
+    req.onupgradeneeded = e => {
+      const d = e.target.result;
+      if (!d.objectStoreNames.contains('lotes'))       { d.createObjectStore('lotes',       {keyPath:'id',autoIncrement:true}).createIndex('createdAt','createdAt'); }
+      if (!d.objectStoreNames.contains('productos'))   { const s = d.createObjectStore('productos',   {keyPath:'id',autoIncrement:true}); s.createIndex('loteId','loteId'); }
+      if (!d.objectStoreNames.contains('clientes'))    { d.createObjectStore('clientes',    {keyPath:'id',autoIncrement:true}); }
+      if (!d.objectStoreNames.contains('ventas'))      { const s = d.createObjectStore('ventas',      {keyPath:'id',autoIncrement:true}); s.createIndex('clienteId','clienteId'); s.createIndex('createdAt','createdAt'); }
+      if (!d.objectStoreNames.contains('venta_items')) { const s = d.createObjectStore('venta_items', {keyPath:'id',autoIncrement:true}); s.createIndex('ventaId','ventaId'); s.createIndex('productoId','productoId'); }
+      if (!d.objectStoreNames.contains('pagos'))       { const s = d.createObjectStore('pagos',       {keyPath:'id',autoIncrement:true}); s.createIndex('ventaId','ventaId'); }
+    };
+  });
+}
+
+const tx  = (store, mode='readonly') => DB.transaction(store, mode).objectStore(store);
+const get = (store, id)    => new Promise((r,j) => { const q=tx(store).get(id); q.onsuccess=()=>r(q.result); q.onerror=()=>j(q.error); });
+const all = (store)        => new Promise((r,j) => { const q=tx(store).getAll(); q.onsuccess=()=>r(q.result); q.onerror=()=>j(q.error); });
+const idx = (store, i, v)  => new Promise((r,j) => { const q=tx(store).index(i).getAll(v); q.onsuccess=()=>r(q.result); q.onerror=()=>j(q.error); });
+const add = (store, data)  => new Promise((r,j) => { const q=tx(store,'readwrite').add({...data,createdAt:data.createdAt||new Date().toISOString()}); q.onsuccess=()=>r(q.result); q.onerror=()=>j(q.error); });
+const put = (store, data)  => new Promise((r,j) => { const q=tx(store,'readwrite').put(data); q.onsuccess=()=>r(q.result); q.onerror=()=>j(q.error); });
+const del = (store, id)    => new Promise((r,j) => { const q=tx(store,'readwrite').delete(id); q.onsuccess=()=>r(); q.onerror=()=>j(q.error); });
+
+/* ═══════════════════════════════════════════
+   MATH
+═══════════════════════════════════════════ */
+const loteGastos = l => (pf(l.gastosTax)+pf(l.gastosEnvio)+pf(l.gastosServicios));
+const gpuCalc    = (g,u) => u>0 ? g/u : 0;
+const costoReal  = (cb,gpu) => cb+gpu;
+const precioVenta= (cb,mg,gpu,pm) => (pm&&pm>0) ? pm : cb*(1+mg/100)+gpu;
+
+async function loteStats(lote) {
+  const prods = await idx('productos','loteId',lote.id);
+  const totalU = prods.reduce((s,p)=>s+(p.cantidadInicial||0),0);
+  const tg = loteGastos(lote);
+  const gpu = gpuCalc(tg,totalU);
+  let gan=0, cost=0;
+  for(const p of prods){
+    const cb=pf(p.costoBase), mg=pf(p.margenGanancia);
+    const pm=pf(p.precioManual||0);
+    const cr=costoReal(cb,gpu), pv=precioVenta(cb,mg,gpu,pm);
+    gan  += (pv-cr)*(p.cantidadStock||0);
+    cost += cr*(p.cantidadStock||0);
+  }
+  return {
+    ...lote, totalUnidades:totalU, totalGastos:tg,
+    ganancia: r2(gan), ganPct: cost>0 ? r1(gan/cost*100) : 0,
+    costoInvertido: r2(cost)
+  };
+}
+
+async function productoFull(p) {
+  const lote = await get('lotes', p.loteId);
+  const prods = await idx('productos','loteId',p.loteId);
+  const totalU = prods.reduce((s,q)=>s+(q.cantidadInicial||0),0);
+  const tg = lote ? loteGastos(lote) : 0;
+  const gpu = gpuCalc(tg,totalU);
+  const cb = pf(p.costoBase), mg = pf(p.margenGanancia);
+  return {
+    ...p, cb, mg, gpu,
+    cr:  r2(costoReal(cb,gpu)),
+    pv:  r2(precioVenta(cb,mg,gpu)),
+    loteNombre: lote?.nombre||''
+  };
+}
+
+/* ═══════════════════════════════════════════
+   NAVIGATION
+═══════════════════════════════════════════ */
+let curPage = 'dashboard';
+let stack   = [];
+
+function nav(page, params={}) {
+  stack = [];
+  cleanFAB();
+  curPage = page;
+  setNavActive(page);
+  document.getElementById('content').scrollTop=0;
+  render(page, params);
+}
+
+function push(page, params={}) {
+  stack.push(curPage);
+  cleanFAB();
+  curPage = page;
+  document.getElementById('content').scrollTop=0;
+  render(page, params);
+}
+
+function goBack() {
+  if(stack.length){ nav(stack.pop()); }
+}
+
+function setNavActive(page){
+  document.querySelectorAll('.nav-item').forEach(el=>
+    el.classList.toggle('active', el.dataset.page===page));
+}
+
+async function render(page, params={}) {
+  const c = document.getElementById('content');
+  c.innerHTML = '<div class="loading">⏳</div>';
+  document.getElementById('header-action').innerHTML='';
+  try {
+    switch(page){
+      case 'dashboard':     await pgDashboard();           break;
+      case 'lotes':         await pgLotes();               break;
+      case 'lote-detail':   await pgLoteDetail(params.id); break;
+      case 'inventario':    await pgInventario(params);    break;
+      case 'clientes':      await pgClientes();            break;
+      case 'cliente-detail':await pgClienteDetail(params.id); break;
+      case 'ventas':        await pgVentas();              break;
+      case 'venta-detail':  await pgVentaDetail(params.id); break;
+      default: c.innerHTML='<div class="empty"><div class="empty-icon">🤷</div><div>Página no encontrada</div></div>';
+    }
+  } catch(e) {
+    console.error(e);
+    c.innerHTML=`<div class="empty"><div class="empty-icon">❌</div><div>${e.message}</div></div>`;
+  }
+}
+
+/* ═══════════════════════════════════════════
+   SEASONAL ALERTS
+═══════════════════════════════════════════ */
+function seasonalAlerts() {
+  const today = new Date(); today.setHours(0,0,0,0);
+  const yr = today.getFullYear();
+  const dates = [
+    {name:'San Valentín',    m:2,  d:14, em:'❤️'},
+    {name:'Día del Niño',    m:4,  d:30, em:'🧸'},
+    {name:'Día de la Madre', m:5,  d:10, em:'💐'},
+    {name:'Día del Padre',   m:6,  d:15, em:'👔'},
+    {name:'Día de Muertos',  m:11, d:2,  em:'💀'},
+    {name:'Navidad',         m:12, d:24, em:'🎄'},
+    {name:'Año Nuevo',       m:1,  d:1,  em:'🎆'},
+  ];
+  const result = [];
+  for(const d of dates){
+    let target = new Date(yr, d.m-1, d.d);
+    if(target < today) target = new Date(yr+1, d.m-1, d.d);
+    const diff = Math.round((target-today)/(86400000));
+    if(diff <= 90) result.push({...d, diff, target});
+  }
+  return result.sort((a,b)=>a.diff-b.diff);
+}
+
+/* ═══════════════════════════════════════════
+   SLOW MOVING
+═══════════════════════════════════════════ */
+async function slowMoving() {
+  const [prods, vitems, ventas] = await Promise.all([all('productos'), all('venta_items'), all('ventas')]);
+  const vMap = new Map(ventas.map(v=>[v.id,v]));
+  const lastSale = new Map();
+  for(const vi of vitems){
+    const v = vMap.get(vi.ventaId); if(!v) continue;
+    const t = new Date(v.createdAt);
+    if(!lastSale.has(vi.productoId) || lastSale.get(vi.productoId)<t) lastSale.set(vi.productoId,t);
+  }
+  const now = new Date();
+  return prods
+    .filter(p=>(p.cantidadStock||0)>0)
+    .map(p=>{ const ls=lastSale.get(p.id); return{...p, lastSale:ls, daysIdle:ls?Math.round((now-ls)/86400000):null}; })
+    .filter(p=>p.daysIdle===null || p.daysIdle>30)
+    .sort((a,b)=>(b.daysIdle??Infinity)-(a.daysIdle??Infinity));
+}
+
+/* ═══════════════════════════════════════════
+   DASHBOARD
+═══════════════════════════════════════════ */
+async function pgDashboard() {
+  const [lotes, clientes, ventas] = await Promise.all([all('lotes'),all('clientes'),all('ventas')]);
+  const stats = await Promise.all(lotes.map(loteStats));
+  const totalGan = stats.reduce((s,l)=>s+l.ganancia,0);
+  const totV = ventas.reduce((s,v)=>s+pf(v.total),0);
+  const totP = ventas.reduce((s,v)=>s+pf(v.totalPagado),0);
+  const alerts = seasonalAlerts();
+  const slow = await slowMoving();
+
+  let h = `
+    <h1>Resumen</h1>
+    <p class="page-sub">Panel de tu negocio</p>
+
+    <div class="stat-grid">
+      <div class="stat-card"><div class="stat-label">Lotes</div><div class="stat-value">${lotes.length}</div></div>
+      <div class="stat-card"><div class="stat-label">Clientes</div><div class="stat-value">${clientes.length}</div></div>
+      <div class="stat-card"><div class="stat-label">Ventas Total</div><div class="stat-value" style="font-size:18px">${f$(totV)}</div></div>
+      <div class="stat-card"><div class="stat-label">Por Cobrar</div><div class="stat-value" style="font-size:18px;color:var(--red)">${f$(totV-totP)}</div></div>
+    </div>
+
+    <div class="card" style="background:var(--green-bg);border-color:var(--green-border);margin-bottom:16px">
+      <div style="font-size:12px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.5px">📈 Ganancia Esperada Total (stock actual)</div>
+      <div style="font-size:32px;font-weight:900;color:var(--green);margin-top:6px">${f$(totalGan)}</div>
+    </div>`;
+
+  // Chart
+  if(stats.length>0){
+    h += `<div class="sec-header"><div class="sec-title">📊 Rentabilidad por Lote</div></div>`;
+    h += `<div class="card" style="padding:12px">${chartHTML(stats)}</div>`;
+  }
+
+  // Seasonal
+  if(alerts.length>0){
+    h += `<div class="sec-header" style="margin-top:6px"><div class="sec-title">🗓️ Fechas Clave Próximas</div></div>`;
+    for(const a of alerts){
+      const cls = a.diff<=30?'alert-red':a.diff<=60?'alert-amber':'alert-green';
+      const when = a.diff===0?'¡Hoy!':a.diff===1?'Mañana':`En ${a.diff} días`;
+      const tip  = a.diff<=30?'⚠️ ¡Preparar stock ahora!':a.diff<=60?'📦 Planificar compras pronto':'🔍 Empezar a evaluar stock';
+      h += `<div class="alert ${cls}">
+        <div class="alert-icon">${a.em}</div>
+        <div><div class="alert-title">${a.name} — ${when}</div>
+        <div class="alert-body">${fmtDate(a.target.toISOString())} &nbsp;·&nbsp; ${tip}</div></div>
+      </div>`;
+    }
+  }
+
+  // Slow moving
+  if(slow.length>0){
+    h += `<div class="sec-header" style="margin-top:6px"><div class="sec-title">🐌 Baja Rotación (+30 días)</div></div>
+    <div class="card">`;
+    for(const p of slow.slice(0,6)){
+      const txt = p.daysIdle===null?'Sin ventas registradas':`Sin vender: ${p.daysIdle} días`;
+      h += `<div class="row" onclick="push('inventario',{destacar:${p.id}})">
+        <div class="row-left"><div class="row-title">${esc(p.nombre)}</div><div class="row-sub">${txt} · Stock: ${p.cantidadStock}</div></div>
+        <span class="badge badge-amber">Rotar</span>
+      </div>`;
+    }
+    h += `</div>`;
+  }
+
+  document.getElementById('content').innerHTML = h;
+}
+
+function chartHTML(stats) {
+  const barW=52, gap=14, chartH=150, pad=16;
+  const maxG = Math.max(...stats.map(l=>l.ganancia), 1);
+  const totalW = stats.length*(barW+gap)+pad*2;
+  let bars='';
+  stats.forEach((l,i)=>{
+    const bh = Math.max(6, Math.round((l.ganancia/maxG)*(chartH-50)));
+    const x  = pad+i*(barW+gap);
+    const y  = chartH-28-bh;
+    const name = l.nombre.length>8?l.nombre.slice(0,7)+'…':l.nombre;
+    bars += `
+      <rect x="${x}" y="${y}" width="${barW}" height="${bh}" rx="7" fill="#d97706" opacity=".85"/>
+      <text x="${x+barW/2}" y="${y-5}"    text-anchor="middle" font-size="11" font-weight="800" fill="#16a34a">${f$(l.ganancia)}</text>
+      <text x="${x+barW/2}" y="${chartH-14}" text-anchor="middle" font-size="9.5" fill="#6b7280">${name}</text>
+      <text x="${x+barW/2}" y="${chartH-2}"  text-anchor="middle" font-size="9"   fill="#d97706" font-weight="800">${l.ganPct}%</text>`;
+  });
+  return `<div class="chart-wrap"><svg width="${Math.max(totalW,280)}" height="${chartH}" style="display:block">${bars}</svg></div>`;
+}
+
+/* ═══════════════════════════════════════════
+   LOTES
+═══════════════════════════════════════════ */
+async function pgLotes() {
+  const lotes = await all('lotes');
+  const stats = await Promise.all(lotes.map(loteStats));
+  stats.sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
+
+  let h = `<h1>📦 Lotes</h1><p class="page-sub">Importaciones y costos</p>`;
+  if(!stats.length){
+    h+=`<div class="empty"><div class="empty-icon">📦</div><div class="empty-text">Sin lotes. Toca + para crear el primero.</div></div>`;
+  } else {
+    for(const l of stats){
+      h+=`<div class="card" onclick="push('lote-detail',{id:${l.id}})">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
+          <div><div class="card-title">${esc(l.nombre)}</div><div class="card-sub">📅 ${fmtDateShort(l.fechaImportacion)}</div></div>
+          <span class="row-chevron">›</span>
+        </div>
+        ${l.descripcion?`<p style="font-size:13px;color:var(--muted);margin-bottom:10px;line-height:1.4">${esc(l.descripcion)}</p>`:''}
+        <div class="form-row" style="margin-bottom:10px">
+          <div class="stat-card" style="padding:11px"><div class="stat-label">Unidades</div><div style="font-size:20px;font-weight:800">${l.totalUnidades}</div></div>
+          <div class="stat-card" style="padding:11px"><div class="stat-label">Gastos</div><div style="font-size:20px;font-weight:800">${f$(l.totalGastos)}</div></div>
+        </div>
+        <div class="profit-row">
+          <div class="profit-label">📈 Ganancia Esperada</div>
+          <div class="profit-value">${f$(l.ganancia)}<span class="profit-pct">${l.ganPct}%</span></div>
+        </div>
+      </div>`;
+    }
+  }
+  document.getElementById('content').innerHTML=h;
+  addFAB(()=>openLoteForm());
+}
+
+async function pgLoteDetail(id) {
+  const lote = await get('lotes',id);
+  if(!lote){ document.getElementById('content').innerHTML='<div class="empty">Lote no encontrado</div>'; return; }
+
+  const prods = await idx('productos','loteId',id);
+  const totalU = prods.reduce((s,p)=>s+(p.cantidadInicial||0),0);
+  const tg = loteGastos(lote);
+  const gpu = gpuCalc(tg,totalU);
+  const st  = await loteStats(lote);
+
+  document.getElementById('header-action').innerHTML=
+    `<button class="btn btn-secondary btn-sm" onclick="openLoteForm(${id})">✏️ Editar</button>`;
+
+  let h=`
+    <button class="back-btn" onclick="goBack()">‹ Lotes</button>
+    <h1>${esc(lote.nombre)}</h1>
+    <p class="page-sub">📅 ${fmtDateShort(lote.fechaImportacion)}</p>
+
+    <div class="card" style="background:var(--green-bg);border-color:var(--green-border)">
+      <div style="font-size:12px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.5px">📈 Ganancia Esperada en Stock</div>
+      <div style="font-size:30px;font-weight:900;color:var(--green);margin:6px 0 2px">${f$(st.ganancia)} <span style="font-size:16px;font-weight:700">${st.ganPct}%</span></div>
+      <div style="font-size:12px;color:var(--green)">sobre ${f$(st.costoInvertido)} invertidos</div>
+    </div>
+
+    <div class="card">
+      <div class="card-title" style="margin-bottom:10px">💸 Gastos de Importación</div>
+      <div class="breakdown">
+        <div class="breakdown-row"><span>Impuestos (Tax)</span><span>${f$(lote.gastosTax||0)}</span></div>
+        <div class="breakdown-row"><span>Flete / Envío</span><span>${f$(lote.gastosEnvio||0)}</span></div>
+        <div class="breakdown-row"><span>Servicios Extra</span><span>${f$(lote.gastosServicios||0)}</span></div>
+        <div class="breakdown-row breakdown-total"><span>Total Gastos</span><span>${f$(tg)}</span></div>
+        <div class="breakdown-row" style="color:var(--primary);font-weight:700"><span>Por Unidad (${totalU} uds)</span><span>${f$(gpu)}</span></div>
+      </div>
+    </div>
+
+    <div class="sec-header">
+      <div class="sec-title">🏷️ Productos (${prods.length})</div>
+      <button class="btn btn-primary btn-sm" onclick="openProductoForm(${id})">+ Agregar</button>
+    </div>`;
+
+  if(!prods.length){
+    h+=`<div class="empty"><div class="empty-icon">📭</div><div class="empty-text">Sin productos. Agrega el primero.</div></div>`;
+  } else {
+    h+=`<div class="card">`;
+    for(const p of prods){
+      const cb=pf(p.costoBase), mg=pf(p.margenGanancia);
+      const pm=pf(p.precioManual||0);
+      const cr=r2(costoReal(cb,gpu)), pv=r2(precioVenta(cb,mg,gpu,pm));
+      const stockPct = p.cantidadInicial>0?Math.round(p.cantidadStock/p.cantidadInicial*100):0;
+      h+=`<div class="row">
+        <div class="row-left">
+          <div class="row-title">${esc(p.nombre)}</div>
+          <div class="row-sub">CB: ${f$(cb)} · CR: ${f$(cr)} · ${pm>0?`<span style="color:var(--warning)">Precio manual</span>`:`Margen: ${mg}%`}</div>
+          <div style="font-size:12px;margin-top:2px;color:${p.cantidadStock>0?'var(--green)':'var(--red)'}">
+            Stock: ${p.cantidadStock}/${p.cantidadInicial} (${stockPct}%)
+          </div>
+        </div>
+        <div class="row-right">
+          <div style="font-size:17px;font-weight:800;color:var(--primary)">${f$(pv)}</div>
+          <button onclick="event.stopPropagation();openProductoForm(${id},${p.id})" style="background:none;border:none;color:var(--primary);font-size:12px;cursor:pointer;font-weight:700;padding:4px 0;font-family:inherit">✏️</button>
+        </div>
+      </div>`;
+    }
+    h+=`</div>`;
+  }
+  document.getElementById('content').innerHTML=h;
+}
+
+/* ═══════════════════════════════════════════
+   INVENTARIO
+═══════════════════════════════════════════ */
+async function pgInventario(params={}) {
+  const soloStock = params.soloStock||false;
+  const [prods, lotes] = await Promise.all([all('productos'),all('lotes')]);
+  const loteMap = new Map(lotes.map(l=>[l.id,l]));
+
+  // gpu per lote
+  const loteProds = new Map();
+  for(const p of prods){ if(!loteProds.has(p.loteId)) loteProds.set(p.loteId,[]); loteProds.get(p.loteId).push(p); }
+  const gpuMap = new Map();
+  for(const [lid,ps] of loteProds){
+    const l=loteMap.get(lid); const tg=l?loteGastos(l):0;
+    const tu=ps.reduce((s,p)=>s+(p.cantidadInicial||0),0);
+    gpuMap.set(lid,gpuCalc(tg,tu));
+  }
+
+  const filtered = soloStock ? prods.filter(p=>(p.cantidadStock||0)>0) : prods;
+  filtered.sort((a,b)=>a.nombre.localeCompare(b.nombre));
+
+  let h=`<h1>🏷️ Inventario</h1>
+    <div class="tabs">
+      <div class="tab ${!soloStock?'active':''}" onclick="nav('inventario',{soloStock:false})">Todos (${prods.length})</div>
+      <div class="tab ${soloStock?'active':''}" onclick="nav('inventario',{soloStock:true})">En Stock (${prods.filter(p=>p.cantidadStock>0).length})</div>
+    </div>`;
+
+  if(!filtered.length){
+    h+=`<div class="empty"><div class="empty-icon">📭</div><div class="empty-text">Sin productos.</div></div>`;
+  } else {
+    h+=`<div class="card">`;
+    for(const p of filtered){
+      const gpu=gpuMap.get(p.loteId)||0;
+      const cb=pf(p.costoBase), mg=pf(p.margenGanancia);
+      const pv=r2(precioVenta(cb,mg,gpu));
+      const lote=loteMap.get(p.loteId);
+      const destClass = params.destacar===p.id?'background:#fef3c7;border-radius:8px;':'';
+      h+=`<div class="row" style="${destClass}">
+        <div class="row-left">
+          <div class="row-title">${esc(p.nombre)}</div>
+          <div class="row-sub">${lote?esc(lote.nombre):''} · Margen: ${mg}%</div>
+          <div style="font-size:12px;margin-top:2px">
+            <span style="color:${p.cantidadStock>0?'var(--green)':'var(--red)'}">Stock: ${p.cantidadStock}</span>
+            <span style="color:var(--muted)">/${p.cantidadInicial}</span>
+          </div>
+        </div>
+        <div class="row-right">
+          <div style="font-size:17px;font-weight:800;color:var(--primary)">${f$(pv)}</div>
+          <div style="font-size:11px;color:var(--muted)">CB: ${f$(cb)}</div>
+        </div>
+      </div>`;
+    }
+    h+=`</div>`;
+  }
+  document.getElementById('content').innerHTML=h;
+}
+
+/* ═══════════════════════════════════════════
+   CLIENTES
+═══════════════════════════════════════════ */
+async function pgClientes() {
+  const clientes = await all('clientes');
+  clientes.sort((a,b)=>a.nombre.localeCompare(b.nombre));
+
+  let h=`<h1>👥 Clientes</h1><p class="page-sub">${clientes.length} cliente${clientes.length!==1?'s':''} registrado${clientes.length!==1?'s':''}</p>`;
+
+  if(!clientes.length){
+    h+=`<div class="empty"><div class="empty-icon">👤</div><div class="empty-text">Sin clientes. Toca + para agregar.</div></div>`;
+  } else {
+    h+=`<div class="card">`;
+    for(const c of clientes){
+      const ventas = await idx('ventas','clienteId',c.id);
+      const deuda  = ventas.reduce((s,v)=>s+pf(v.total)-pf(v.totalPagado),0);
+      h+=`<div class="row" onclick="push('cliente-detail',{id:${c.id}})">
+        <div class="row-left">
+          <div class="row-title">${esc(c.nombre)}</div>
+          <div class="row-sub">${c.telefono?'📱 '+esc(c.telefono):'Sin teléfono'}</div>
+        </div>
+        <div class="row-right">
+          <div style="font-size:14px;font-weight:800;color:${deuda>0?'var(--red)':'var(--green)'}">${f$(deuda)}</div>
+          <div style="font-size:11px;color:var(--muted)">${deuda>0?'pendiente':'al día'}</div>
+        </div>
+        <span class="row-chevron">›</span>
+      </div>`;
+    }
+    h+=`</div>`;
+  }
+  document.getElementById('content').innerHTML=h;
+  addFAB(()=>openClienteForm());
+}
+
+async function pgClienteDetail(id) {
+  const c = await get('clientes',id);
+  if(!c){ document.getElementById('content').innerHTML='<div class="empty">Cliente no encontrado</div>'; return; }
+
+  document.getElementById('header-action').innerHTML=
+    `<button class="btn btn-secondary btn-sm" onclick="openClienteForm(${id})">✏️ Editar</button>`;
+
+  const ventas = await idx('ventas','clienteId',id);
+  ventas.sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
+  const totV = ventas.reduce((s,v)=>s+pf(v.total),0);
+  const totP = ventas.reduce((s,v)=>s+pf(v.totalPagado),0);
+
+  let h=`
+    <button class="back-btn" onclick="goBack()">‹ Clientes</button>
+    <h1>${esc(c.nombre)}</h1>
+    ${c.telefono?`<p class="page-sub">📱 ${esc(c.telefono)}</p>`:''}
+    ${c.email?`<p class="page-sub" style="margin-top:-10px">📧 ${esc(c.email)}</p>`:''}
+    ${c.direccion?`<p class="page-sub" style="margin-top:-10px">📍 ${esc(c.direccion)}</p>`:''}
+
+    <div class="stat-grid">
+      <div class="stat-card"><div class="stat-label">Total Vendido</div><div class="stat-value" style="font-size:18px">${f$(totV)}</div></div>
+      <div class="stat-card"><div class="stat-label">Por Cobrar</div><div class="stat-value" style="font-size:18px;color:${totV-totP>0?'var(--red)':'var(--green)'}">${f$(totV-totP)}</div></div>
+    </div>
+
+    <div class="sec-header">
+      <div class="sec-title">💰 Ventas a Crédito</div>
+      <button class="btn btn-primary btn-sm" onclick="openNuevaVenta(${id})">+ Nueva</button>
+    </div>`;
+
+  if(!ventas.length){
+    h+=`<div class="empty" style="padding:28px 16px"><div class="empty-icon">🧾</div><div class="empty-text">Sin ventas.</div></div>`;
+  } else {
+    h+=`<div class="card">`;
+    for(const v of ventas){
+      const pend=pf(v.total)-pf(v.totalPagado);
+      h+=`<div class="row" onclick="push('venta-detail',{id:${v.id}})">
+        <div class="row-left">
+          <div class="row-title">${fmtDate(v.createdAt)}</div>
+          <div class="row-sub">Total: ${f$(v.total)} · Pagado: ${f$(v.totalPagado)}</div>
+        </div>
+        <div class="row-right">
+          <span class="badge ${estadoBadge(v.estado)}">${v.estado}</span>
+          ${pend>0?`<div style="font-size:13px;font-weight:800;color:var(--red);margin-top:3px">${f$(pend)}</div>`:''}
+        </div>
+        <span class="row-chevron">›</span>
+      </div>`;
+    }
+    h+=`</div>`;
+  }
+  document.getElementById('content').innerHTML=h;
+}
+
+/* ═══════════════════════════════════════════
+   VENTAS
+═══════════════════════════════════════════ */
+async function pgVentas() {
+  const [ventas, clientes] = await Promise.all([all('ventas'),all('clientes')]);
+  ventas.sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
+  const cMap = new Map(clientes.map(c=>[c.id,c]));
+
+  let h=`<h1>💰 Ventas</h1><p class="page-sub">${ventas.length} venta${ventas.length!==1?'s':''}</p>`;
+  if(!ventas.length){
+    h+=`<div class="empty"><div class="empty-icon">🧾</div><div class="empty-text">Sin ventas registradas.</div></div>`;
+  } else {
+    h+=`<div class="card">`;
+    for(const v of ventas){
+      const c=cMap.get(v.clienteId);
+      const pend=pf(v.total)-pf(v.totalPagado);
+      h+=`<div class="row" onclick="push('venta-detail',{id:${v.id}})">
+        <div class="row-left">
+          <div class="row-title">${c?esc(c.nombre):'Cliente'}</div>
+          <div class="row-sub">${fmtDate(v.createdAt)} · ${f$(v.total)}</div>
+        </div>
+        <div class="row-right">
+          <span class="badge ${estadoBadge(v.estado)}">${v.estado}</span>
+          ${pend>0?`<div style="font-size:13px;font-weight:800;color:var(--red);margin-top:3px">${f$(pend)}</div>`:''}
+        </div>
+        <span class="row-chevron">›</span>
+      </div>`;
+    }
+    h+=`</div>`;
+  }
+  document.getElementById('content').innerHTML=h;
+}
+
+async function pgVentaDetail(id) {
+  const v = await get('ventas',id);
+  if(!v){ document.getElementById('content').innerHTML='<div class="empty">Venta no encontrada</div>'; return; }
+
+  const c = await get('clientes',v.clienteId);
+  const [vitems, pagos] = await Promise.all([idx('venta_items','ventaId',id), idx('pagos','ventaId',id)]);
+  pagos.sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
+  const pend=pf(v.total)-pf(v.totalPagado);
+
+  let h=`
+    <button class="back-btn" onclick="goBack()">‹ Ventas</button>
+    <h1 style="font-size:20px">Venta ${fmtDate(v.createdAt)}</h1>
+    <p class="page-sub">Cliente: ${c?esc(c.nombre):'N/A'}</p>
+
+    <div class="stat-grid">
+      <div class="stat-card"><div class="stat-label">Total</div><div class="stat-value" style="font-size:20px">${f$(v.total)}</div></div>
+      <div class="stat-card"><div class="stat-label">Pendiente</div><div class="stat-value" style="font-size:20px;color:${pend>0?'var(--red)':'var(--green)'}">${f$(pend)}</div></div>
+    </div>
+    <div style="text-align:center;margin-bottom:14px">
+      <span class="badge ${estadoBadge(v.estado)}" style="font-size:13px;padding:5px 14px">${v.estado}</span>
+    </div>`;
+
+  if(vitems.length){
+    h+=`<div class="card"><div class="card-title" style="margin-bottom:10px">🛒 Artículos</div>`;
+    for(const it of vitems){
+      const prod=await get('productos',it.productoId);
+      h+=`<div class="breakdown-row"><span>${prod?esc(prod.nombre):'Producto'} ×${it.cantidad}</span><span>${f$(pf(it.precioUnitario)*it.cantidad)}</span></div>`;
+    }
+    h+=`<div class="breakdown-row breakdown-total"><span>Total</span><span>${f$(v.total)}</span></div></div>`;
+  }
+
+  h+=`<div class="sec-header">
+    <div class="sec-title">💳 Pagos</div>
+    ${pend>0?`<button class="btn btn-primary btn-sm" onclick="openPagoForm(${id})">+ Registrar</button>`:''}
+  </div>`;
+
+  if(!pagos.length){
+    h+=`<div class="empty" style="padding:24px 16px"><div class="empty-icon">💳</div><div class="empty-text">Sin pagos.</div></div>`;
+  } else {
+    h+=`<div class="card">`;
+    for(const p of pagos){
+      h+=`<div class="row" style="cursor:default">
+        <div class="row-left"><div class="row-title">${f$(p.monto)}</div><div class="row-sub">${fmtDate(p.createdAt)}${p.notas?' · '+esc(p.notas):''}</div></div>
+        <span class="badge badge-green">✓</span>
+      </div>`;
+    }
+    h+=`</div>`;
+  }
+
+  if(v.notas) h+=`<div class="card"><div style="font-size:13px;color:var(--muted)">📝 ${esc(v.notas)}</div></div>`;
+
+  document.getElementById('content').innerHTML=h;
+}
+
+/* ═══════════════════════════════════════════
+   FORMS — LOTE
+═══════════════════════════════════════════ */
+async function openLoteForm(id=null) {
+  const lote = id ? await get('lotes',id) : null;
+  openSheet(id?'✏️ Editar Lote':'📦 Nuevo Lote', `
+    <div class="form-group"><label class="form-label">Nombre</label>
+      <input class="form-input" id="fl-nom" value="${lote?esc(lote.nombre):''}" placeholder="Ej: Ropa Verano 2025"></div>
+    <div class="form-group"><label class="form-label">Fecha de importación</label>
+      <input class="form-input" id="fl-fec" type="date" value="${lote?lote.fechaImportacion:today()}"></div>
+    <div class="form-group"><label class="form-label">Descripción</label>
+      <textarea class="form-input" id="fl-desc" placeholder="Notas...">${lote?esc(lote.descripcion||''):''}</textarea></div>
+    <div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Gastos de importación</div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Impuestos</label><input class="form-input" id="fl-tax" type="number" step=".01" min="0" value="${lote?lote.gastosTax||0:''}" placeholder="0.00"></div>
+      <div class="form-group"><label class="form-label">Flete</label><input class="form-input" id="fl-env" type="number" step=".01" min="0" value="${lote?lote.gastosEnvio||0:''}" placeholder="0.00"></div>
+    </div>
+    <div class="form-group"><label class="form-label">Servicios Extra</label>
+      <input class="form-input" id="fl-svc" type="number" step=".01" min="0" value="${lote?lote.gastosServicios||0:''}" placeholder="0.00"></div>
+    <div style="display:flex;gap:10px;margin-top:8px">
+      ${id?`<button class="btn btn-danger" style="flex:1" onclick="confirmDel('¿Eliminar lote?','Se eliminarán sus productos.',()=>delLote(${id}))">🗑️</button>`:''}
+      <button class="btn btn-primary" style="flex:2" onclick="saveLote(${id||'null'})">💾 Guardar</button>
+    </div>`);
+}
+
+async function saveLote(id) {
+  const nom=V('fl-nom'), fec=V('fl-fec');
+  if(!nom||!fec){ toast('⚠️ Nombre y fecha requeridos'); return; }
+  const data={nombre:nom,fechaImportacion:fec,descripcion:V('fl-desc'),gastosTax:pf(V('fl-tax')),gastosEnvio:pf(V('fl-env')),gastosServicios:pf(V('fl-svc'))};
+  if(id){ const e=await get('lotes',id); await put('lotes',{...e,...data}); toast('✅ Lote actualizado'); }
+  else  { await add('lotes',data); toast('✅ Lote creado'); }
+  closeSheet(); nav('lotes');
+}
+
+async function delLote(id) {
+  const ps=await idx('productos','loteId',id);
+  for(const p of ps) await del('productos',p.id);
+  await del('lotes',id);
+  closeSheet(); toast('🗑️ Lote eliminado'); nav('lotes');
+}
+
+/* ═══════════════════════════════════════════
+   FORMS — PRODUCTO
+═══════════════════════════════════════════ */
+async function openProductoForm(loteId, id=null) {
+  const p = id ? await get('productos',id) : null;
+  openSheet(id?'✏️ Editar Producto':'🏷️ Nuevo Producto', `
+    <div class="form-group"><label class="form-label">Nombre</label>
+      <input class="form-input" id="fp-nom" value="${p?esc(p.nombre):''}" placeholder="Ej: Blusa Manga Corta"></div>
+    <div class="form-group"><label class="form-label">Descripción</label>
+      <input class="form-input" id="fp-desc" value="${p?esc(p.descripcion||''):''}" placeholder="Talla, color..."></div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Costo Base ($)</label>
+        <input class="form-input" id="fp-cb" type="number" step=".01" min="0" value="${p?p.costoBase:''}" placeholder="0.00"></div>
+      <div class="form-group"><label class="form-label">Margen (%)</label>
+        <input class="form-input" id="fp-mg" type="number" step="1" min="0" value="${p?p.margenGanancia:'30'}" placeholder="30"></div>
+    </div>
+    ${!id?`<div class="form-group"><label class="form-label">Cantidad Inicial</label>
+      <input class="form-input" id="fp-qty" type="number" step="1" min="1" value="1"></div>`
+      :`<div style="font-size:13px;color:var(--muted);margin-bottom:12px">Stock actual: <strong>${p?.cantidadStock}</strong> unidades</div>`}
+    <div class="form-group" style="border-top:1px solid var(--border);padding-top:14px;margin-top:6px">
+      <label class="form-label" style="color:var(--warning)">💲 Precio de Venta Manual <span style="font-weight:400;color:var(--muted)">(opcional)</span></label>
+      <input class="form-input" id="fp-pm" type="number" step=".01" min="0" value="${p&&p.precioManual?p.precioManual:''}" placeholder="Dejar vacío = usar cálculo automático">
+      <div style="font-size:11px;color:var(--muted);margin-top:4px">Si se ingresa un valor, reemplaza la fórmula: Costo + Margen + Gastos del lote.</div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:8px">
+      ${id?`<button class="btn btn-danger" style="flex:1" onclick="confirmDel('¿Eliminar producto?','Esta acción no se puede deshacer.',()=>delProducto(${id},${loteId}))">🗑️</button>`:''}
+      <button class="btn btn-primary" style="flex:2" onclick="saveProducto(${loteId},${id||'null'})">💾 Guardar</button>
+    </div>`);
+}
+
+async function saveProducto(loteId, id) {
+  const nom=V('fp-nom'), cb=pf(V('fp-cb'));
+  if(!nom||isNaN(cb)||cb<=0){ toast('⚠️ Nombre y costo requeridos'); return; }
+  const pmRaw=V('fp-pm'); const pm=pmRaw&&pf(pmRaw)>0?pf(pmRaw):null;
+  const data={loteId,nombre:nom,descripcion:V('fp-desc'),costoBase:String(cb),margenGanancia:String(pf(V('fp-mg'))||30),precioManual:pm};
+  if(id){ const e=await get('productos',id); await put('productos',{...e,...data}); toast('✅ Producto actualizado'); }
+  else  { const qty=parseInt(V('fp-qty'))||1; await add('productos',{...data,cantidadInicial:qty,cantidadStock:qty}); toast('✅ Producto agregado'); }
+  closeSheet(); push('lote-detail',{id:loteId});
+}
+
+async function delProducto(id, loteId) {
+  await del('productos',id);
+  closeSheet(); toast('🗑️ Producto eliminado'); push('lote-detail',{id:loteId});
+}
+
+/* ═══════════════════════════════════════════
+   FORMS — CLIENTE
+═══════════════════════════════════════════ */
+async function openClienteForm(id=null) {
+  const c = id ? await get('clientes',id) : null;
+  openSheet(id?'✏️ Editar Cliente':'👤 Nuevo Cliente', `
+    <div class="form-group"><label class="form-label">Nombre Completo</label>
+      <input class="form-input" id="fc-nom" value="${c?esc(c.nombre):''}" placeholder="Nombre y apellido"></div>
+    <div class="form-group"><label class="form-label">Teléfono</label>
+      <input class="form-input" id="fc-tel" type="tel" value="${c?esc(c.telefono||''):''}" placeholder="55 1234 5678"></div>
+    <div class="form-group"><label class="form-label">Email</label>
+      <input class="form-input" id="fc-email" type="email" value="${c?esc(c.email||''):''}" placeholder="correo@ejemplo.com"></div>
+    <div class="form-group"><label class="form-label">Dirección</label>
+      <input class="form-input" id="fc-dir" value="${c?esc(c.direccion||''):''}" placeholder="Calle, ciudad..."></div>
+    <div style="display:flex;gap:10px;margin-top:8px">
+      ${id?`<button class="btn btn-danger" style="flex:1" onclick="confirmDel('¿Eliminar cliente?','Se mantendrán sus ventas históricas.',()=>delCliente(${id}))">🗑️</button>`:''}
+      <button class="btn btn-primary" style="flex:2" onclick="saveCliente(${id||'null'})">💾 Guardar</button>
+    </div>`);
+}
+
+async function saveCliente(id) {
+  const nom=V('fc-nom');
+  if(!nom){ toast('⚠️ El nombre es requerido'); return; }
+  const data={nombre:nom,telefono:V('fc-tel'),email:V('fc-email'),direccion:V('fc-dir')};
+  if(id){ const e=await get('clientes',id); await put('clientes',{...e,...data}); toast('✅ Cliente actualizado'); }
+  else  { await add('clientes',data); toast('✅ Cliente registrado'); }
+  closeSheet(); nav('clientes');
+}
+
+async function delCliente(id) {
+  await del('clientes',id);
+  closeSheet(); toast('🗑️ Cliente eliminado'); nav('clientes');
+}
+
+/* ═══════════════════════════════════════════
+   FORMS — NUEVA VENTA
+═══════════════════════════════════════════ */
+let _viCount=1;
+let _viOpts='';
+
+async function openNuevaVenta(clienteId) {
+  _viCount=1;
+  const prods = (await all('productos')).filter(p=>(p.cantidadStock||0)>0);
+  const lotes  = await all('lotes');
+  const lMap   = new Map(lotes.map(l=>[l.id,l]));
+
+  // compute prices
+  const loteProds=new Map();
+  for(const p of prods){ if(!loteProds.has(p.loteId)) loteProds.set(p.loteId,[]); loteProds.get(p.loteId).push(p); }
+  const gpuM=new Map();
+  for(const [lid,ps] of loteProds){
+    const l=lMap.get(lid), tg=l?loteGastos(l):0, tu=ps.reduce((s,p)=>s+(p.cantidadInicial||0),0);
+    gpuM.set(lid,gpuCalc(tg,tu));
+  }
+
+  const opts = prods.map(p=>{
+    const gpu=gpuM.get(p.loteId)||0;
+    const pm=pf(p.precioManual||0);
+    const pv=r2(precioVenta(pf(p.costoBase),pf(p.margenGanancia),gpu,pm));
+    return `<option value="${p.id}" data-pv="${pv}" data-stock="${p.cantidadStock}">${esc(p.nombre)} (×${p.cantidadStock}) — ${f$(pv)}${pm>0?' ✎':''}</option>`;
+  }).join('');
+
+  if(!opts){ toast('⚠️ Sin productos en stock'); return; }
+  _viOpts = opts;
+
+  openSheet('🛒 Nueva Venta a Crédito',`
+    <div id="vi-list">
+      <div class="vi-item" id="vi-0">
+        <div class="form-group"><label class="form-label">Producto</label>
+          <select class="form-input" id="vi-prod-0" onchange="viPrecio(0)"><option value="">Seleccionar…</option>${opts}</select></div>
+        <div class="form-row">
+          <div class="form-group"><label class="form-label">Cantidad</label>
+            <input class="form-input" id="vi-qty-0" type="number" min="1" value="1" oninput="viTotal()"></div>
+          <div class="form-group"><label class="form-label">Precio Unit.</label>
+            <input class="form-input" id="vi-prc-0" type="number" step=".01" placeholder="0.00" oninput="viTotal()"></div>
+        </div>
+      </div>
+    </div>
+    <button class="btn btn-secondary btn-full" style="margin-bottom:14px" onclick="addVentaItem()">+ Otro producto</button>
+    <div class="form-group"><label class="form-label">Notas</label>
+      <input class="form-input" id="vi-notas" placeholder="Observaciones..."></div>
+    <div class="profit-row" style="margin-bottom:12px">
+      <div class="profit-label">💰 Total</div>
+      <div class="profit-value" id="vi-total">$0.00</div>
+    </div>
+    <button class="btn btn-primary btn-full" onclick="saveVenta(${clienteId})">✅ Registrar Venta</button>`);
+}
+
+function viPrecio(i) {
+  const sel=document.getElementById(`vi-prod-${i}`);
+  if(!sel?.value) return;
+  const opt=sel.options[sel.selectedIndex];
+  const prc=document.getElementById(`vi-prc-${i}`);
+  if(prc){ prc.value=opt.dataset.pv||''; viTotal(); }
+}
+
+function viTotal() {
+  let t=0;
+  document.querySelectorAll('.vi-item').forEach(el=>{
+    const i=el.id.replace('vi-','');
+    const q=parseFloat(document.getElementById(`vi-qty-${i}`)?.value)||0;
+    const p=parseFloat(document.getElementById(`vi-prc-${i}`)?.value)||0;
+    t+=q*p;
+  });
+  const el=document.getElementById('vi-total');
+  if(el) el.textContent=f$(t);
+}
+
+function addVentaItem() {
+  const opts=_viOpts;
+  const i=_viCount++;
+  const div=document.createElement('div');
+  div.className='vi-item'; div.id=`vi-${i}`;
+  div.innerHTML=`
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px;padding-top:12px;border-top:1px solid var(--border)">
+      <div style="font-size:13px;font-weight:700;color:var(--muted)">Producto ${i+1}</div>
+      <button onclick="document.getElementById('vi-${i}').remove();viTotal()" style="background:none;border:none;color:var(--red);font-size:22px;cursor:pointer;line-height:1;padding:0;font-family:inherit">×</button>
+    </div>
+    <div class="form-group"><select class="form-input" id="vi-prod-${i}" onchange="viPrecio(${i})"><option value="">Seleccionar…</option>${opts}</select></div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Cantidad</label><input class="form-input" id="vi-qty-${i}" type="number" min="1" value="1" oninput="viTotal()"></div>
+      <div class="form-group"><label class="form-label">Precio Unit.</label><input class="form-input" id="vi-prc-${i}" type="number" step=".01" placeholder="0.00" oninput="viTotal()"></div>
+    </div>`;
+  document.getElementById('vi-list').appendChild(div);
+}
+
+async function saveVenta(clienteId) {
+  const items=[];
+  for(const el of document.querySelectorAll('.vi-item')){
+    const i=el.id.replace('vi-','');
+    const pid=parseInt(document.getElementById(`vi-prod-${i}`)?.value||0);
+    const prc=parseFloat(document.getElementById(`vi-prc-${i}`)?.value||0);
+    const qty=parseInt(document.getElementById(`vi-qty-${i}`)?.value||1);
+    if(!pid||!prc||prc<=0) continue;
+    const prod=await get('productos',pid);
+    if(!prod||prod.cantidadStock<qty){ toast(`⚠️ Stock insuficiente: ${prod?.nombre||'producto'}`); return; }
+    items.push({pid,prc,qty,prod});
+  }
+  if(!items.length){ toast('⚠️ Agrega al menos un producto'); return; }
+
+  const total=r2(items.reduce((s,it)=>s+it.prc*it.qty,0));
+  const notas=V('vi-notas')||'';
+  const vid=await add('ventas',{clienteId,total:String(total),totalPagado:'0',estado:'pendiente',notas});
+
+  for(const it of items){
+    await add('venta_items',{ventaId:vid,productoId:it.pid,cantidad:it.qty,precioUnitario:String(it.prc)});
+    await put('productos',{...it.prod,cantidadStock:it.prod.cantidadStock-it.qty});
+  }
+
+  closeSheet(); toast('✅ Venta registrada');
+  push('venta-detail',{id:vid});
+}
+
+/* ═══════════════════════════════════════════
+   FORMS — PAGO
+═══════════════════════════════════════════ */
+async function openPagoForm(ventaId) {
+  const v=await get('ventas',ventaId);
+  const pend=r2(pf(v.total)-pf(v.totalPagado));
+  openSheet('💳 Registrar Pago',`
+    <div class="form-group"><label class="form-label">Monto</label>
+      <input class="form-input" id="fp-monto" type="number" step=".01" min=".01" value="${pend}" placeholder="0.00"></div>
+    <div class="form-group"><label class="form-label">Nota</label>
+      <input class="form-input" id="fp-nota" placeholder="Efectivo, transferencia..."></div>
+    <div class="alert alert-amber" style="margin-bottom:14px">
+      <div class="alert-icon">💰</div>
+      <div><div class="alert-title">Pendiente: ${f$(pend)}</div></div>
+    </div>
+    <button class="btn btn-primary btn-full" onclick="savePago(${ventaId})">✅ Confirmar Pago</button>`);
+}
+
+async function savePago(ventaId) {
+  const monto=pf(V('fp-monto'));
+  if(!monto||monto<=0){ toast('⚠️ Monto inválido'); return; }
+  const nota=V('fp-nota')||'';
+  await add('pagos',{ventaId,monto:String(monto),notas:nota});
+  const v=await get('ventas',ventaId);
+  const nuevoP=r2(pf(v.totalPagado)+monto);
+  const total=pf(v.total);
+  const estado=nuevoP>=total?'pagada':nuevoP>0?'parcial':'pendiente';
+  await put('ventas',{...v,totalPagado:String(nuevoP),estado});
+  closeSheet(); toast('✅ Pago registrado');
+  push('venta-detail',{id:ventaId});
+}
+
+/* ═══════════════════════════════════════════
+   UI HELPERS
+═══════════════════════════════════════════ */
+function openSheet(title, body) {
+  const sb=document.getElementById('sheet-body');
+  sb.innerHTML=`<div class="sheet-handle"></div><div class="sheet-title">${title}</div>${body}`;
+  document.getElementById('sheet-overlay').classList.add('open');
+}
+
+function closeSheet() {
+  document.getElementById('sheet-overlay').classList.remove('open');
+}
+
+function overlayClick(e) {
+  if(e.target===document.getElementById('sheet-overlay')) closeSheet();
+}
+
+function confirmDel(title, body, onOk) {
+  const d=document.getElementById('dlg-overlay');
+  document.getElementById('dlg-body').innerHTML=`
+    <div class="dialog-title">${title}</div>
+    <div class="dialog-body">${body}</div>
+    <div class="dialog-btns">
+      <button class="btn btn-secondary" style="flex:1" onclick="document.getElementById('dlg-overlay').classList.remove('open')">Cancelar</button>
+      <button class="btn btn-danger" style="flex:1" id="dlg-ok">Eliminar</button>
+    </div>`;
+  d.classList.add('open');
+  document.getElementById('dlg-ok').onclick=()=>{ d.classList.remove('open'); onOk(); };
+}
+
+function toast(msg) {
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  clearTimeout(t._tid);
+  t._tid=setTimeout(()=>t.classList.remove('show'),2600);
+}
+
+function addFAB(onClick) {
+  cleanFAB();
+  const b=document.createElement('button');
+  b.className='fab'; b.innerHTML='+'; b.onclick=onClick;
+  document.body.appendChild(b);
+}
+
+function cleanFAB() {
+  document.querySelectorAll('.fab').forEach(e=>e.remove());
+}
+
+/* ═══════════════════════════════════════════
+   FORMAT & MISC
+═══════════════════════════════════════════ */
+const pf  = v => parseFloat(v)||0;
+const r2  = v => Math.round(v*100)/100;
+const r1  = v => Math.round(v*10)/10;
+const f$  = v => '$'+(pf(v)).toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2});
+const V   = id => document.getElementById(id)?.value?.trim()||'';
+const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
+function fmtDate(s) {
+  if(!s) return '';
+  return new Date(s).toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'});
+}
+
+function fmtDateShort(s) {
+  if(!s) return '';
+  return new Date(s+'T12:00:00').toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'});
+}
+
+function today() {
+  return new Date().toISOString().split('T')[0];
+}
+
+function estadoBadge(e) {
+  return e==='pagada'?'badge-green':e==='parcial'?'badge-amber':'badge-red';
+}
+
+/* ═══════════════════════════════════════════
+   RESPALDO (exportar / importar)
+═══════════════════════════════════════════ */
+async function exportarDatos() {
+  const data = { app:'GestionCredit', version:1, fecha:new Date().toISOString(), stores:{} };
+  for (const s of STORES) data.stores[s] = await all(s);
+  const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `gestioncredit-respaldo-${today()}.json`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url), 2000);
+  toast('✅ Respaldo descargado');
+}
+
+function importarDatos(input) {
+  const file = input.files && input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = async () => {
+    let data;
+    try { data = JSON.parse(String(reader.result)); }
+    catch { toast('⚠️ Archivo inválido'); return; }
+    if (!data || !data.stores) { toast('⚠️ El archivo no es un respaldo válido'); return; }
+    confirmDel('Restaurar respaldo',
+      'Se reemplazarán TODOS los datos actuales por los del archivo. Esta acción no se puede deshacer.',
+      async () => {
+        try {
+          for (const s of STORES) {
+            await new Promise((r,j)=>{ const q=tx(s,'readwrite').clear(); q.onsuccess=()=>r(); q.onerror=()=>j(q.error); });
+            for (const row of (data.stores[s] || [])) {
+              await new Promise((r,j)=>{ const q=tx(s,'readwrite').put(row); q.onsuccess=()=>r(); q.onerror=()=>j(q.error); });
+            }
+          }
+          closeSheet(); toast('✅ Respaldo restaurado'); nav('dashboard');
+        } catch (e) { toast('⚠️ Error al restaurar: '+e.message); }
+      });
+  };
+  reader.readAsText(file);
+}
+
+function openBackup() {
+  openSheet('💾 Respaldo de datos', `
+    <div class="alert alert-amber" style="margin-bottom:14px">
+      <div class="alert-icon">ℹ️</div>
+      <div><div class="alert-title">Tus datos viven en este navegador</div>
+      <div style="font-size:13px;color:var(--muted);margin-top:4px">Descarga un respaldo con frecuencia. Con el archivo puedes restaurar todo en esta u otra computadora.</div></div>
+    </div>
+    <button class="btn btn-primary btn-full" style="margin-bottom:10px" onclick="exportarDatos()">⬇️ Descargar respaldo (.json)</button>
+    <label class="btn btn-secondary btn-full" style="margin-bottom:4px;display:block;text-align:center;cursor:pointer">
+      ⬆️ Restaurar desde archivo
+      <input type="file" accept="application/json,.json" style="display:none" onchange="importarDatos(this)">
+    </label>`);
+}
+
+/* ═══════════════════════════════════════════
+   BOOT
+═══════════════════════════════════════════ */
+function boot() {
+  document.getElementById('content').innerHTML = '<div class="loading">⏳</div>';
+  openDB()
+    .then(()=>nav('dashboard'))
+    .catch(err=>{
+      document.getElementById('content').innerHTML =
+        `<div class="empty">
+           <div class="empty-icon">❌</div>
+           <div class="empty-text"><b>No se pudo iniciar la app</b><br><br>${esc(err.message)}</div>
+           <button class="btn btn-primary" style="margin-top:18px" onclick="boot()">Reintentar</button>
+           <div style="margin-top:14px;font-size:12px;color:var(--muted);line-height:1.5">
+             Si el problema persiste, cierra otras pestañas de GestiónCredit y evita la ventana privada del navegador.
+           </div>
+         </div>`;
+    });
+}
+
+/* ═══════════════════════════════════════════
+   PANTALLA DE BLOQUEO
+═══════════════════════════════════════════ */
+// SHA-256("hungaroring") — la clave no viaja en texto plano en el bundle.
+const ACCESS_HASH = 'cb43e4c8990969e012299a563299ee2221af2fe2dcf02a45f8966fcc76d9cf2e';
+const UNLOCK_KEY = 'gc_unlocked_v1';
+
+async function sha256Hex(str) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
+function showLock() {
+  document.getElementById('lockscreen').style.display = 'flex';
+  document.getElementById('content').style.display = 'none';
+  document.getElementById('nav').style.display = 'none';
+  setTimeout(() => document.getElementById('lock-input')?.focus(), 50);
+}
+
+function hideLock() {
+  document.getElementById('lockscreen').style.display = 'none';
+  document.getElementById('content').style.display = '';
+  document.getElementById('nav').style.display = '';
+}
+
+function lockApp() {
+  try { localStorage.removeItem(UNLOCK_KEY); } catch(_) {}
+  const i = document.getElementById('lock-input');
+  if (i) i.value = '';
+  document.getElementById('lock-error').textContent = '';
+  showLock();
+}
+window.lockApp = lockApp;
+
+document.getElementById('lock-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const input = document.getElementById('lock-input');
+  const err = document.getElementById('lock-error');
+  const hash = await sha256Hex(input.value || '');
+  if (hash === ACCESS_HASH) {
+    try { localStorage.setItem(UNLOCK_KEY, '1'); } catch(_) {}
+    err.textContent = '';
+    hideLock();
+    boot();
+  } else {
+    err.textContent = 'Clave incorrecta';
+    input.select();
+  }
+});
+
+// Arranque: la sesión queda desbloqueada en este navegador hasta pulsar 🔒.
+(function initGate(){
+  let unlocked = false;
+  try {
+    unlocked = localStorage.getItem(UNLOCK_KEY) === '1' || sessionStorage.getItem(UNLOCK_KEY) === '1';
+  } catch(_) {}
+  if (unlocked) { hideLock(); boot(); }
+  else { showLock(); }
+})();
+
+// ── Limpieza: se retiró el modo offline con Service Worker (versión web) ──
+(function cleanupSW() {
+  if (!("serviceWorker" in navigator)) return;
+  navigator.serviceWorker.getRegistrations().then(function (regs) {
+    regs.forEach(function (r) { r.unregister(); });
+  }).catch(function () {});
+})();
+</script>
+</body>
+</html>
+
